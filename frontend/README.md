@@ -2,7 +2,7 @@
 ### AI-Powered IoT Security & Drift Detection Platform
 
 DriftPulse is an **AI-driven Security Operations Center (SOC) platform** designed to monitor IoT device behavior, detect anomalies and configuration drift, and calculate a **dynamic trust score** to identify potential security risks in real time.
-
+ 
 The system combines **machine learning anomaly detection, drift analysis, and policy evaluation** to help security teams detect suspicious activity across connected devices.
 
 ---
