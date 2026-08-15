@@ -16,8 +16,8 @@ DATABASE_URL = os.getenv(
     f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
 
-# SQLite fallback path
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "database"))
+# SQLite fallback path (stored locally in backend/.sqlite_data)
+DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".sqlite_data"))
 DB_PATH = os.path.join(DB_DIR, "driftpulse.db")
 
 USE_POSTGRES = False

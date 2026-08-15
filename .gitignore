@@ -37,3 +37,9 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Database files
+database/
+.sqlite_data/
+*.db
+
