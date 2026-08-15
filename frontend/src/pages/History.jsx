@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react"
-import { Clock, Trash2, FileText, ChevronDown, ChevronUp, Database, RefreshCw, Server, AlertTriangle, Shield, Bell, Search, Eye, ShieldAlert } from "lucide-react"
+import { Clock, Trash2, FileText, ChevronDown, ChevronUp, Database, RefreshCw, Server, AlertTriangle, Shield, Bell, Search, Eye, ShieldAlert, Download } from "lucide-react"
 import MetricCard from "../components/MetricCard"
 import TrendChart from "../components/TrendChart"
 import DonutChart from "../components/DonutChart"
 import { useNavigate } from "react-router-dom"
+import { generatePdfReport } from "../utils/generatePdfReport"
 
 const HISTORY_KEY = "dp_analysis_history"
 
@@ -46,7 +47,6 @@ export default function History() {
       const raw = localStorage.getItem(HISTORY_KEY)
       const parsed = raw ? JSON.parse(raw) : []
       setEntries(parsed)
-      // Auto expand latest run if available
       if (parsed.length > 0) setExpanded(parsed[0].id)
     } catch {
       setEntries([])
@@ -56,6 +56,15 @@ export default function History() {
   const clearHistory = () => {
     localStorage.removeItem(HISTORY_KEY)
     setEntries([])
+    setExpanded(null)
+  }
+
+  const deleteRun = (id, e) => {
+    if (e) e.stopPropagation()
+    const updated = entries.filter(item => item.id !== id)
+    setEntries(updated)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated))
+    if (expanded === id) setExpanded(null)
   }
 
   return (
@@ -65,7 +74,7 @@ export default function History() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Analysis History</h1>
-          <p className="page-subtitle">Timeline & visual snapshots of past IoT telemetry analysis runs</p>
+          <p className="page-subtitle">Timeline, graph snapshots & PDF reports of past IoT telemetry analysis runs</p>
         </div>
         {entries.length > 0 && (
           <button
@@ -73,7 +82,7 @@ export default function History() {
             style={{ display:"flex",alignItems:"center",gap:"0.5rem",color:"var(--danger)",borderColor:"rgba(239,68,68,0.4)" }}
             onClick={clearHistory}
           >
-            <Trash2 size={15} /> Clear History
+            <Trash2 size={15} /> Clear All History
           </button>
         )}
       </div>
@@ -120,6 +129,7 @@ export default function History() {
               isLast={i === entries.length - 1}
               expanded={expanded === entry.id}
               onToggle={() => setExpanded(prev => prev === entry.id ? null : entry.id)}
+              onDelete={(e) => deleteRun(entry.id, e)}
             />
           ))}
         </div>
@@ -148,7 +158,7 @@ export default function History() {
   )
 }
 
-function HistoryEntry({ entry, index, isLast, expanded, onToggle }) {
+function HistoryEntry({ entry, index, isLast, expanded, onToggle, onDelete }) {
   const navigate = useNavigate()
   const runNumber = index + 1
   const [searchTerm, setSearchTerm] = useState("")
@@ -219,10 +229,31 @@ function HistoryEntry({ entry, index, isLast, expanded, onToggle }) {
                 <Clock size={13} /> {timeAgo(entry.timestamp)}
               </span>
             </div>
-            <div style={{ display:"flex",alignItems:"center",gap:"0.75rem" }}>
-              <span style={{ color:"var(--text-muted)",fontSize:"0.8rem",fontFamily:"monospace" }}>
+
+            <div style={{ display:"flex",alignItems:"center",gap:"0.6rem" }}>
+              <span style={{ color:"var(--text-muted)",fontSize:"0.8rem",fontFamily:"monospace",marginRight:"0.4rem" }}>
                 {formatDate(entry.timestamp)}
               </span>
+
+              {/* Action Buttons */}
+              <button
+                className="btn-outline"
+                style={{ display:"inline-flex",alignItems:"center",gap:"0.35rem",padding:"0.25rem 0.65rem",fontSize:"0.75rem" }}
+                onClick={(e) => { e.stopPropagation(); generatePdfReport(entry); }}
+                title="Download PDF Security Report"
+              >
+                <Download size={13} /> PDF
+              </button>
+
+              <button
+                className="btn-outline"
+                style={{ display:"inline-flex",alignItems:"center",gap:"0.35rem",padding:"0.25rem 0.65rem",fontSize:"0.75rem",color:"var(--danger)",borderColor:"rgba(239,68,68,0.4)" }}
+                onClick={onDelete}
+                title="Delete this run from history"
+              >
+                <Trash2 size={13} /> Delete
+              </button>
+
               {expanded ? <ChevronUp size={18} style={{ color:"var(--accent)" }} /> : <ChevronDown size={18} style={{ color:"var(--text-muted)" }} />}
             </div>
           </div>

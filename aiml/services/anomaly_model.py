@@ -55,10 +55,12 @@ def predict_anomaly(model, X):
     # Using typical bounds [-0.5, 0.5] for Isolation Forest decision function
     anomaly_scores = []
     for s in scores:
-        if s >= 0:
-            val = 0.5 * (1.0 - min(s / 0.5, 1.0))
+        if s > 0:
+            # Normal sample: s > 0. Map [0.2, 0.0] -> [0.02, 0.25]
+            val = max(0.02, 0.25 - (s * 1.15))
         else:
-            val = 0.5 + 0.5 * min(abs(s) / 0.5, 1.0)
-        anomaly_scores.append(val)
+            # Anomalous sample: s <= 0. Map [0.0, -0.35] -> [0.35, 1.0]
+            val = min(1.0, 0.35 + (abs(s) * 2.1))
+        anomaly_scores.append(round(float(val), 3))
 
     return np.array(anomaly_scores)

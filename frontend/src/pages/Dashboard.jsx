@@ -5,13 +5,15 @@ import DonutChart from "../components/DonutChart"
 import {
   Server, AlertTriangle, Shield, Bell, RefreshCw,
   CheckCircle2, XCircle, Upload, FileText, Cpu, Activity,
-  Zap, Search, Eye, ShieldAlert, Database
+  Zap, Search, Eye, ShieldAlert, Database, Download
 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import {
   getAlerts, getAnomalyDistribution, getDashboardSummary,
   getDevices, triggerAnalysis,
 } from "../services/api"
+import { generatePdfReport } from "../utils/generatePdfReport"
+
 
 /* ── helpers ── */
 const toArray  = (v) => (Array.isArray(v) ? v : [])
@@ -468,12 +470,27 @@ function AnalyticsPhase({ onReUpload }) {
             <span style={{ width:7,height:7,borderRadius:"50%",background:"var(--success)",animation:"pulse-dot 2s infinite" }} />
             Live Monitoring
           </span>
+          <button
+            className="btn-outline"
+            style={{ display:"inline-flex",alignItems:"center",gap:"0.5rem",fontSize:"0.85rem" }}
+            onClick={() => generatePdfReport({
+              fileName: "Latest_SOC_Analysis.csv",
+              timestamp: new Date().toISOString(),
+              metrics,
+              devices: normalizedDevices,
+              trendData,
+              donutData
+            })}
+          >
+            <Download size={15} /> Download PDF
+          </button>
           <label className="analyze-btn" style={{ cursor:"pointer",display:"inline-flex",alignItems:"center",gap:"0.5rem" }} title="Upload new dataset">
             <RefreshCw size={15} className={analyzing ? "spin-icon" : ""} />
             {analyzing ? "Analyzing…" : "Upload New Dataset"}
             <input type="file" accept=".csv" style={{ display:"none" }} onChange={handleFileUpload} disabled={analyzing} />
           </label>
         </div>
+
       </div>
 
       {/* Metric Cards */}

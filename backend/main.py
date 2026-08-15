@@ -405,17 +405,38 @@ async def run_analysis(file: UploadFile = File(...)):
             "LIGHT-01": {"type": "Light", "location": "Plant C - Light Controls", "firmware": "v1.0.0", "uptime": "93d 9h"}
         }
 
+        # Per-device expected baselines (avg bytes per log under normal operation)
+        device_baselines_per_log = {
+            "CAMERA-01": 7200.0,
+            "CAMERA-02": 9800.0,
+            "SENSOR-01": 420.0,
+            "SENSOR-02": 280.0,
+            "GATEWAY-01": 15300.0,
+            "ROUTER-01": 915.0,
+            "LOCK-01": 2280.0,
+            "LIGHT-01": 2250.0,
+        }
+
         devices_processed = 0
 
         for i, row in features.iterrows():
             dev_id = str(row["device_id"])
             anomaly = float(anomaly_scores[i])
-            
-            # Calculate drift based on pre-loaded static baseline
-            global baseline_total_bytes
-            drift = float(calculate_drift(row["total_bytes"], baseline_total_bytes))
-            
-            policy_penalty = 0.1
+            log_count = max(1, int(row["log_count"]))
+            total_bytes = float(row["total_bytes"])
+            avg_bytes_per_log = total_bytes / log_count
+
+            expected_baseline = device_baselines_per_log.get(dev_id, 1000.0)
+            drift = float(calculate_drift(avg_bytes_per_log, expected_baseline))
+
+            # Dynamic policy penalty based on anomaly and drift levels
+            if anomaly < 0.25 and drift < 0.25:
+                policy_penalty = 0.0
+            elif anomaly < 0.50 and drift < 0.50:
+                policy_penalty = 0.25
+            else:
+                policy_penalty = 0.55
+
             trust = compute_trust_score(anomaly, drift, policy_penalty)
             risk = risk_level(trust)
             policy = policy_status(risk)
