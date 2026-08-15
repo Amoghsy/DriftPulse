@@ -12,9 +12,16 @@ from dotenv import load_dotenv
 import pandas as pd
 
 # Add project root and aiml directory to python path
+# Add project root and aiml directory to python path
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-AIML_DIR = os.path.join(PROJECT_ROOT, "aiml")
-sys.path.append(AIML_DIR)
+possible_aiml_paths = [
+    os.path.join(PROJECT_ROOT, "aiml"),
+    "/app/aiml",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "aiml")),
+]
+for p in possible_aiml_paths:
+    if os.path.exists(p) and p not in sys.path:
+        sys.path.insert(0, p)
 
 # Load env variables
 load_dotenv()

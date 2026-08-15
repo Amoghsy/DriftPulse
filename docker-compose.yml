@@ -23,7 +23,7 @@ services:
   # DriftPulse FastAPI Backend Service
   backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     container_name: driftpulse-backend
     restart: always
