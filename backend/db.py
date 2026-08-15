@@ -27,18 +27,21 @@ USE_POSTGRES = False
 try:
     import psycopg2
     from psycopg2.extras import RealDictCursor
-    # Attempt connecting to PostgreSQL
-    conn_test = psycopg2.connect(
-        dbname=POSTGRES_DB,
-        user=POSTGRES_USER,
-        password=POSTGRES_PASSWORD,
-        host=POSTGRES_HOST,
-        port=POSTGRES_PORT,
-        connect_timeout=3
-    )
+    # Attempt connecting to PostgreSQL (using DATABASE_URL if available)
+    if os.getenv("DATABASE_URL"):
+        conn_test = psycopg2.connect(dsn=DATABASE_URL, connect_timeout=5)
+    else:
+        conn_test = psycopg2.connect(
+            dbname=POSTGRES_DB,
+            user=POSTGRES_USER,
+            password=POSTGRES_PASSWORD,
+            host=POSTGRES_HOST,
+            port=POSTGRES_PORT,
+            connect_timeout=3
+        )
     conn_test.close()
     USE_POSTGRES = True
-    print(f"[OK] Connected to PostgreSQL database ({POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB})")
+    print(f"[OK] Connected to PostgreSQL database")
 except Exception as e:
     USE_POSTGRES = False
     print(f"[INFO] PostgreSQL connection info ({str(e).strip()}). Using SQLite fallback at: {DB_PATH}")
@@ -51,13 +54,16 @@ class DBConnection:
         if self.is_postgres:
             import psycopg2
             from psycopg2.extras import RealDictCursor
-            self.conn = psycopg2.connect(
-                dbname=POSTGRES_DB,
-                user=POSTGRES_USER,
-                password=POSTGRES_PASSWORD,
-                host=POSTGRES_HOST,
-                port=POSTGRES_PORT
-            )
+            if os.getenv("DATABASE_URL"):
+                self.conn = psycopg2.connect(dsn=DATABASE_URL)
+            else:
+                self.conn = psycopg2.connect(
+                    dbname=POSTGRES_DB,
+                    user=POSTGRES_USER,
+                    password=POSTGRES_PASSWORD,
+                    host=POSTGRES_HOST,
+                    port=POSTGRES_PORT
+                )
             self.cursor_obj = self.conn.cursor(cursor_factory=RealDictCursor)
         else:
             os.makedirs(DB_DIR, exist_ok=True)
