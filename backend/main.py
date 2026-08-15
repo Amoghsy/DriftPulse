@@ -29,11 +29,11 @@ from db import get_connection, init_db
 
 app = FastAPI(title="DriftPulse API", version="1.0.0")
 
-# CORS middleware configuration
+# Robust CORS middleware configuration for local dev and production (Vercel)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
