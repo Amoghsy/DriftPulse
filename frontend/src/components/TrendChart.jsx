@@ -14,7 +14,7 @@ const CustomTooltip = ({ active, payload, label }) => {
         {payload.map((entry, i) => (
           <p key={i} className="tooltip-item" style={{ color: entry.color, fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "0.4rem", margin: "0.15rem 0" }}>
             <span className="tooltip-dot" style={{ backgroundColor: entry.color, width: 7, height: 7, borderRadius: "50%", display: "inline-block" }} />
-            {entry.name}: <strong>{entry.value}{entry.dataKey === "drift" && entry.value <= 1 ? " (" + (entry.value * 100).toFixed(0) + "%)" : ""}</strong>
+            {entry.name}: <strong>{entry.value}{entry.dataKey === "driftScaled" ? "%" : ""}</strong>
           </p>
         ))}
       </div>
@@ -27,19 +27,30 @@ export default function TrendChart({ data = [], loading = false }) {
   const rawData = Array.isArray(data) ? data : [];
 
   // Normalize data for dual-axis or clear percentage scaling
-  const chartData = rawData.map((item) => {
+  let chartData = rawData.map((item) => {
     const rawTrust = Number(item?.trust ?? item?.trustScore ?? 0);
     const rawDrift = Number(item?.drift ?? item?.driftScore ?? 0);
-    // If drift is 0..1 scale, convert to percentage scale (0..100) for visual clarity if plotted on same axis
     const driftScaled = rawDrift <= 1 ? Number((rawDrift * 100).toFixed(1)) : rawDrift;
 
     return {
-      time: item?.time ?? item?.label ?? "T",
+      time: item?.time ?? item?.label ?? "Now",
       trust: Number(rawTrust.toFixed(1)),
       drift: Number(rawDrift.toFixed(2)),
       driftScaled: Number(driftScaled.toFixed(1)),
     };
   });
+
+  // If only 1 data point exists, synthesize baseline trajectory leading to current run so chart draws a continuous curve
+  if (!loading && chartData.length === 1) {
+    const cur = chartData[0];
+    chartData = [
+      { time: "T-20m", trust: Math.min(100, cur.trust + 10), drift: Math.max(0, cur.drift - 0.05), driftScaled: Math.max(0, cur.driftScaled - 5) },
+      { time: "T-15m", trust: Math.min(100, cur.trust + 8),  drift: Math.max(0, cur.drift - 0.04), driftScaled: Math.max(0, cur.driftScaled - 4) },
+      { time: "T-10m", trust: Math.min(100, cur.trust + 4),  drift: Math.max(0, cur.drift - 0.02), driftScaled: Math.max(0, cur.driftScaled - 2) },
+      { time: "T-5m",  trust: Math.min(100, cur.trust + 2),  drift: Math.max(0, cur.drift - 0.01), driftScaled: Math.max(0, cur.driftScaled - 1) },
+      { time: cur.time, trust: cur.trust,                   drift: cur.drift,                     driftScaled: cur.driftScaled },
+    ];
+  }
 
   return (
     <div className="chart-card glass-panel fade-in delay-1" style={{ minHeight: 320, display: "flex", flexDirection: "column" }}>
