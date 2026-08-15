@@ -44,6 +44,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Root & Health Check Endpoints
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "DriftPulse SOC Intelligence API",
+        "version": "1.0.0",
+        "docs": "/docs"
+    }
+
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    db_status = "healthy"
+    try:
+        conn = get_connection()
+        conn.close()
+    except Exception as e:
+        db_status = f"unhealthy: {str(e)}"
+
+    return {
+        "status": "healthy" if "unhealthy" not in db_status else "degraded",
+        "database": db_status,
+        "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    }
+
 # Pre-computed baseline total_bytes from original telemetry
 baseline_total_bytes = 100000.0  # default fallback
 
