@@ -1,4 +1,4 @@
-# Dockerfile for DriftPulse FastAPI Backend
+# Dockerfile for DriftPulse FastAPI Backend (Render / Root build context)
 FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -6,18 +6,22 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
+# Copy backend requirements and install
+COPY backend/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . /app/backend
+# Copy backend application code
+COPY backend /app/backend
 WORKDIR /app/backend
 
 EXPOSE 8000
 
+# Run Alembic migrations and launch uvicorn server
 CMD ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT"]
