@@ -128,7 +128,19 @@ DriftPulse/
 
 ## 🛠️ Quick Start & Setup Instructions
 
-### 1. One-Click Automated Run (Recommended)
+### 1. One-Click Docker Setup (Easiest)
+
+Run backend + PostgreSQL in containerized mode with a single command:
+
+```bash
+docker-compose up --build
+```
+- **Backend API**: `http://localhost:8000`
+- **PostgreSQL Database**: `localhost:5432`
+
+---
+
+### 2. One-Click Automated Run (Local Script)
 
 #### In Git Bash / Linux / macOS:
 ```bash

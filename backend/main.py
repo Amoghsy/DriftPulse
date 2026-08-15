@@ -626,3 +626,9 @@ Do not wrap the response in markdown blocks like ```json ... ```, output ONLY ra
         })
 
     return insights[:3]
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

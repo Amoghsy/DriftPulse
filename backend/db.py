@@ -15,6 +15,8 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # SQLite fallback path (stored locally in backend/.sqlite_data)
 DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".sqlite_data"))
