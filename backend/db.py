@@ -1,5 +1,6 @@
 import os
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,72 +16,40 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 )
+
+# Standardize postgres:// to postgresql:// for SQLAlchemy / psycopg2 compatibility
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# SQLite fallback path (stored locally in backend/.sqlite_data)
-DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".sqlite_data"))
-DB_PATH = os.path.join(DB_DIR, "driftpulse.db")
 
-USE_POSTGRES = False
-
-try:
-    import psycopg2
-    from psycopg2.extras import RealDictCursor
-    # Attempt connecting to PostgreSQL (using DATABASE_URL if available)
-    if os.getenv("DATABASE_URL"):
-        conn_test = psycopg2.connect(dsn=DATABASE_URL, connect_timeout=5)
-    else:
-        conn_test = psycopg2.connect(
-            dbname=POSTGRES_DB,
-            user=POSTGRES_USER,
-            password=POSTGRES_PASSWORD,
-            host=POSTGRES_HOST,
-            port=POSTGRES_PORT,
-            connect_timeout=3
-        )
-    conn_test.close()
-    USE_POSTGRES = True
-    print(f"[OK] Connected to PostgreSQL database")
-except Exception as e:
-    USE_POSTGRES = False
-    print(f"[INFO] PostgreSQL connection info ({str(e).strip()}). Using SQLite fallback at: {DB_PATH}")
-
-
-class DBConnection:
-    """Unified Database Connection Wrapper for PostgreSQL & SQLite compatibility"""
+class PostgresConnection:
+    """Pure PostgreSQL Database Connection Wrapper using psycopg2"""
     def __init__(self):
-        self.is_postgres = USE_POSTGRES
-        if self.is_postgres:
-            import psycopg2
-            from psycopg2.extras import RealDictCursor
+        try:
             if os.getenv("DATABASE_URL"):
-                self.conn = psycopg2.connect(dsn=DATABASE_URL)
+                self.conn = psycopg2.connect(dsn=DATABASE_URL, connect_timeout=10)
             else:
                 self.conn = psycopg2.connect(
                     dbname=POSTGRES_DB,
                     user=POSTGRES_USER,
                     password=POSTGRES_PASSWORD,
                     host=POSTGRES_HOST,
-                    port=POSTGRES_PORT
+                    port=POSTGRES_PORT,
+                    connect_timeout=10
                 )
             self.cursor_obj = self.conn.cursor(cursor_factory=RealDictCursor)
-        else:
-            os.makedirs(DB_DIR, exist_ok=True)
-            self.conn = sqlite3.connect(DB_PATH)
-            self.conn.row_factory = sqlite3.Row
-            self.cursor_obj = self.conn.cursor()
+        except Exception as e:
+            raise RuntimeError(
+                f"❌ Failed to connect to PostgreSQL database: {str(e)}.\n"
+                f"Please ensure PostgreSQL is running and set DATABASE_URL or POSTGRES_* environment variables."
+            ) from e
 
     def cursor(self):
         return self
 
-    def _convert_sql(self, sql):
-        if self.is_postgres:
-            return sql.replace("?", "%s")
-        return sql
-
     def execute(self, sql, params=()):
-        clean_sql = self._convert_sql(sql)
+        # Convert SQLite ? parameters to PostgreSQL %s
+        clean_sql = sql.replace("?", "%s")
         self.cursor_obj.execute(clean_sql, params)
         return self.cursor_obj
 
@@ -108,80 +77,83 @@ class DBConnection:
 
 
 def get_connection():
-    return DBConnection()
+    return PostgresConnection()
 
 
 def init_db():
-    conn = get_connection()
-    
-    # Users Table
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        uid VARCHAR(255) PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        role VARCHAR(255) NOT NULL
-    )
-    """)
+    try:
+        conn = get_connection()
+        
+        # Users Table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            uid VARCHAR(255) PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            role VARCHAR(255) NOT NULL
+        )
+        """)
 
-    # Devices Table
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS devices (
-        id VARCHAR(255) PRIMARY KEY,
-        ip VARCHAR(255) NOT NULL,
-        type VARCHAR(255) NOT NULL,
-        trust_score DOUBLE PRECISION NOT NULL,
-        drift_score DOUBLE PRECISION NOT NULL,
-        anomaly_score DOUBLE PRECISION NOT NULL,
-        policy VARCHAR(255) NOT NULL,
-        risk VARCHAR(255) NOT NULL,
-        last_seen VARCHAR(255) NOT NULL,
-        location VARCHAR(255) NOT NULL,
-        firmware VARCHAR(255) NOT NULL,
-        uptime VARCHAR(255) NOT NULL,
-        log_count INTEGER DEFAULT 0,
-        total_bytes DOUBLE PRECISION DEFAULT 0
-    )
-    """)
+        # Devices Table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS devices (
+            id VARCHAR(255) PRIMARY KEY,
+            ip VARCHAR(255) NOT NULL,
+            type VARCHAR(255) NOT NULL,
+            trust_score DOUBLE PRECISION NOT NULL,
+            drift_score DOUBLE PRECISION NOT NULL,
+            anomaly_score DOUBLE PRECISION NOT NULL,
+            policy VARCHAR(255) NOT NULL,
+            risk VARCHAR(255) NOT NULL,
+            last_seen VARCHAR(255) NOT NULL,
+            location VARCHAR(255) NOT NULL,
+            firmware VARCHAR(255) NOT NULL,
+            uptime VARCHAR(255) NOT NULL,
+            log_count INTEGER DEFAULT 0,
+            total_bytes DOUBLE PRECISION DEFAULT 0
+        )
+        """)
 
-    # Device History Table
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS device_history (
-        device_id VARCHAR(255) NOT NULL,
-        timestamp VARCHAR(255) NOT NULL,
-        trust_score DOUBLE PRECISION NOT NULL,
-        drift_score DOUBLE PRECISION NOT NULL,
-        anomaly_score DOUBLE PRECISION NOT NULL,
-        PRIMARY KEY (device_id, timestamp)
-    )
-    """)
+        # Device History Table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS device_history (
+            device_id VARCHAR(255) NOT NULL,
+            timestamp VARCHAR(255) NOT NULL,
+            trust_score DOUBLE PRECISION NOT NULL,
+            drift_score DOUBLE PRECISION NOT NULL,
+            anomaly_score DOUBLE PRECISION NOT NULL,
+            PRIMARY KEY (device_id, timestamp)
+        )
+        """)
 
-    # Alerts Table
-    conn.execute("""
-    CREATE TABLE IF NOT EXISTS alerts (
-        id VARCHAR(255) PRIMARY KEY,
-        device_id VARCHAR(255) NOT NULL,
-        type VARCHAR(255) NOT NULL,
-        severity VARCHAR(255) NOT NULL,
-        status VARCHAR(255) NOT NULL,
-        timestamp VARCHAR(255) NOT NULL,
-        resolution_hours DOUBLE PRECISION NOT NULL
-    )
-    """)
+        # Alerts Table
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS alerts (
+            id VARCHAR(255) PRIMARY KEY,
+            device_id VARCHAR(255) NOT NULL,
+            type VARCHAR(255) NOT NULL,
+            severity VARCHAR(255) NOT NULL,
+            status VARCHAR(255) NOT NULL,
+            timestamp VARCHAR(255) NOT NULL,
+            resolution_hours DOUBLE PRECISION NOT NULL
+        )
+        """)
 
-    conn.commit()
-
-    # Seed default admin user if empty
-    res = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()
-    count = res["count"] if res else 0
-    if count == 0:
-        conn.execute("INSERT INTO users VALUES (?, ?, ?, ?)", ('local-admin', 'admin@driftpulse.io', 'admin123', 'Security Lead'))
-        conn.execute("INSERT INTO users VALUES (?, ?, ?, ?)", ('local-user', 'user@driftpulse.io', 'password', 'Operator'))
         conn.commit()
 
-    conn.close()
+        # Seed default admin user if empty
+        res = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()
+        count = res["count"] if res else 0
+        if count == 0:
+            conn.execute("INSERT INTO users VALUES (%s, %s, %s, %s)", ('local-admin', 'admin@driftpulse.io', 'admin123', 'Security Lead'))
+            conn.execute("INSERT INTO users VALUES (%s, %s, %s, %s)", ('local-user', 'user@driftpulse.io', 'password', 'Operator'))
+            conn.commit()
+
+        conn.close()
+        print("✅ PostgreSQL Database initialized successfully.")
+    except Exception as e:
+        print(f"⚠️ Database initialization skipped/failed: {str(e)}")
 
 
 if __name__ == "__main__":
     init_db()
-    print("Database initialized successfully.")

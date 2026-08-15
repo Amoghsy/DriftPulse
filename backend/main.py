@@ -1,6 +1,5 @@
 import sys
 import os
-import sqlite3
 import json
 import io
 from datetime import datetime, timedelta
