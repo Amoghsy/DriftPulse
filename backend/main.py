@@ -60,6 +60,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    role: str = "Operator"
+
 class OtpSendRequest(BaseModel):
     email: str
 
@@ -101,6 +106,24 @@ def login(payload: LoginRequest):
         "email": user["email"],
         "role": user["role"]
     }
+
+@app.post("/api/auth/register")
+def register(payload: RegisterRequest):
+    import uuid
+    email = payload.email.strip().lower()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT uid FROM users WHERE email = ?", (email,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=409, detail="An account with this email already exists")
+    uid = str(uuid.uuid4())
+    valid_roles = ["Security Lead", "Operator", "Analyst"]
+    role = payload.role if payload.role in valid_roles else "Operator"
+    cursor.execute("INSERT INTO users VALUES (?, ?, ?, ?)", (uid, email, payload.password, role))
+    conn.commit()
+    conn.close()
+    return {"uid": uid, "email": email, "role": role}
 
 @app.post("/api/auth/otp/send")
 def send_otp(payload: OtpSendRequest):

@@ -1,4 +1,4 @@
-import { loginAdminWithPassword, requestPasswordResetApi } from "./api"
+import { loginAdminWithPassword, registerUserApi, requestPasswordResetApi } from "./api"
 
 const STORAGE_KEY = 'dp_user'
 const subscribers = new Set()
@@ -31,6 +31,20 @@ export async function loginWithEmailPassword(email, password) {
   } catch (error) {
     const err = new Error(error?.message || 'Authentication failed')
     err.code = 'auth/invalid-credential'
+    throw err
+  }
+}
+
+export async function registerUser(email, password, role) {
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  try {
+    const user = await registerUserApi(normalizedEmail, password, role)
+    setStoredUser(user)
+    subscribers.forEach((cb) => cb(user))
+    return { user }
+  } catch (error) {
+    const err = new Error(error?.message || 'Registration failed')
+    err.code = error?.message?.includes('already exists') ? 'auth/email-already-in-use' : 'auth/registration-failed'
     throw err
   }
 }

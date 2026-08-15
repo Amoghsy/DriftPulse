@@ -5,11 +5,8 @@ import Navbar from "./components/Navbar"
 import AuthGuard from "./components/AuthGuard"
 import Dashboard from "./pages/Dashboard"
 import Alerts from "./pages/Alerts"
-import Devices from "./pages/Devices"
 import DeviceDetail from "./pages/DeviceDetail"
-import Settings from "./pages/Settings"
-import Profile from "./pages/Profile"
-import Help from "./pages/Help"
+import History from "./pages/History"
 import Login from "./pages/Login"
 import { observeAuthState, logoutUser } from "./services/auth"
 
@@ -38,7 +35,7 @@ export default function App() {
       setUser({
         uid: firebaseUser.uid,
         email: firebaseUser.email ?? "",
-        role: "Security Lead",
+        role: firebaseUser.role ?? "Security Lead",
       })
       setAuthLoading(false)
     })
@@ -74,12 +71,9 @@ export default function App() {
         )}
       >
         <Route path="/" element={<Dashboard />} />
+        <Route path="/history" element={<History />} />
         <Route path="/alerts" element={<Alerts />} />
-        <Route path="/devices" element={<Devices />} />
         <Route path="/devices/:id" element={<DeviceDetail />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/help" element={<Help />} />
       </Route>
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>

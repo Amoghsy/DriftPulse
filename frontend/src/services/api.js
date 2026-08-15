@@ -88,6 +88,13 @@ export function loginAdminWithPassword(email, password) {
   });
 }
 
+export function registerUserApi(email, password, role) {
+  return request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, role }),
+  });
+}
+
 export function sendLoginOtp(email) {
   return request('/auth/otp/send', {
     method: 'POST',

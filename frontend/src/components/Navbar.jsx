@@ -1,4 +1,4 @@
-import { Search, Bell, HelpCircle, User, LogOut } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Navbar({ user, onLogout }) {
@@ -19,21 +19,16 @@ export default function Navbar({ user, onLogout }) {
         </div>
       </div>
 
-      {/* Right: Icons + User */}
+      {/* Right: User Badge */}
       <div className="nav-actions">
-      
-
         <div className="user-profile">
-          <Link to="/profile" className="avatar" title="Profile">
+          <div className="avatar">
             {user?.email ? initials : <User size={18} />}
-          </Link>
+          </div>
           <div className="user-info">
             <span className="user-name">{user?.email ?? 'Analyst'}</span>
-            
           </div>
         </div>
-
-       
       </div>
     </header>
   );

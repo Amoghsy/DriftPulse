@@ -63,7 +63,6 @@ export default function DeviceTable({ devices = [], loading = false }) {
             {loading ? 'Loading devices...' : 'Real-time trust & drift monitoring'}
           </span>
         </div>
-        <button className="btn-outline" onClick={() => navigate('/devices')}>View All</button>
       </div>
 
       <div className="table-wrapper">

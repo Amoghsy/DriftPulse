@@ -1,20 +1,13 @@
 import {
-  LayoutDashboard, Server, Bell, Settings as SettingsIcon,
-  LogOut, Shield, HelpCircle, User
+  LayoutDashboard, Bell, LogOut, Shield, Clock
 } from "lucide-react";
 import { createElement } from "react";
 import { NavLink } from "react-router-dom";
 
 const MAIN_NAV = [
   { to: "/",        icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/devices", icon: Server,          label: "Devices" },
+  { to: "/history", icon: Clock,           label: "History" },
   { to: "/alerts",  icon: Bell,            label: "Alerts" },
-];
-
-const SYSTEM_NAV = [
-  { to: "/settings", icon: SettingsIcon, label: "Settings" },
-  { to: "/profile",  icon: User,         label: "Profile" },
-  { to: "/help",     icon: HelpCircle,   label: "Help" },
 ];
 
 export default function Sidebar({ onLogout }) {
@@ -44,21 +37,7 @@ export default function Sidebar({ onLogout }) {
           </NavLink>
         ))}
 
-        <div className="sidebar-divider" />
-
-        {/* System */}
-        <span className="nav-section-label">System</span>
-
-        {SYSTEM_NAV.map(({ to, icon, label }) => (
-          <NavLink
-            key={label}
-            to={to}
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          >
-            {createElement(icon, { className: "nav-icon", size: 18 })}
-            <span>{label}</span>
-          </NavLink>
-        ))}
+        <div className="sidebar-divider" style={{ marginTop: "auto" }} />
 
         <button
           className="nav-item sidebar-logout-btn"
