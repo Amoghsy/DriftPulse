@@ -150,6 +150,17 @@ def reset_password(payload: ResetPasswordRequest):
         raise HTTPException(status_code=404, detail="No account with that email")
     return {"status": "success", "message": "Password reset link sent (simulated)"}
 
+# Helper to safely extract scalar values from dict or tuple cursors
+def get_scalar_val(cursor, fallback=0):
+    row = cursor.fetchone()
+    if not row:
+        return fallback
+    if isinstance(row, dict):
+        val = list(row.values())[0] if row else fallback
+        return val if val is not None else fallback
+    val = row[0] if len(row) > 0 else fallback
+    return val if val is not None else fallback
+
 # Dashboard Summary Endpoint
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary():
@@ -158,19 +169,19 @@ def get_dashboard_summary():
 
     # Total Devices count
     cursor.execute("SELECT COUNT(*) FROM devices")
-    total_devices = cursor.fetchone()[0]
+    total_devices = get_scalar_val(cursor, 0)
 
     # High Risk Devices
     cursor.execute("SELECT COUNT(*) FROM devices WHERE LOWER(risk) = 'high'")
-    high_risk_devices = cursor.fetchone()[0]
+    high_risk_devices = get_scalar_val(cursor, 0)
 
     # Avg Trust Score
     cursor.execute("SELECT AVG(trust_score) FROM devices")
-    avg_trust_score = cursor.fetchone()[0] or 0.0
+    avg_trust_score = float(get_scalar_val(cursor, 0.0))
 
     # Active Alerts (excluding Resolved/Closed)
     cursor.execute("SELECT COUNT(*) FROM alerts WHERE LOWER(status) NOT IN ('resolved', 'closed')")
-    active_alerts = cursor.fetchone()[0]
+    active_alerts = get_scalar_val(cursor, 0)
 
     # Overall system trust trend (avg scores grouped by timestamp)
     cursor.execute("""
@@ -457,7 +468,7 @@ async def run_analysis(file: UploadFile = File(...)):
 
             # Check if device exists, otherwise insert
             cursor.execute("SELECT COUNT(*) FROM devices WHERE id = ?", (dev_id,))
-            exists = cursor.fetchone()[0] > 0
+            exists = int(get_scalar_val(cursor, 0)) > 0
 
             ip = device_ip_map.get(dev_id, "N/A")
 
